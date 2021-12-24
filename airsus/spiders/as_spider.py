@@ -1,7 +1,7 @@
 import scrapy
 import tldextract
 
-from .top_100_airports import top_100_airports
+from airport_lists.top_100_airports import top_100_airports
 
 
 class ASRSpider(scrapy.Spider):
