@@ -29,6 +29,13 @@ class ASRSpider(scrapy.Spider):
     def remove_duplicates(self, to_save):
         return [dict(t) for t in {tuple(d.items()) for d in to_save}]
 
+    def is_blacklisted(self, domain):
+        blacklisted = ['google', 'facebook', 'instagram', 'twitter',
+                       'youtube', 'linkedin', 'pinterest', 'reddit', 'tumblr',
+                       'wikipedia', 'amazon', 'flickr', 'imdb', 'apple', 'bing',
+                       'yahoo',]
+        return domain in blacklisted
+
     def is_relative(self, link):
         if link is None:
             return False
@@ -37,8 +44,14 @@ class ASRSpider(scrapy.Spider):
         return False
 
     def parse(self, response):
-        anchors = response.css('a')
-        footer_links = response.css('footer a::attr(href)').getall()
+        try:
+            anchors = response.css('a')
+        except:
+            anchors = []
+        try:
+            footer_links = response.css('footer a::attr(href)').getall()
+        except:
+            footer_links = []
         full_footer_links = []
         for link in footer_links:
             if self.is_relative(link):
@@ -48,6 +61,8 @@ class ASRSpider(scrapy.Spider):
         to_follow = []
         to_save = []
         domain = tldextract.extract(response.request.url).domain
+        if self.is_blacklisted(domain):
+            return None
         for a in anchors:
             link = a.css('::attr(href)').get()
             link_text = a.css('::text').get()
@@ -60,7 +75,7 @@ class ASRSpider(scrapy.Spider):
                     'link_text': link_text,
                     'source': response.request.url,
                 })
-            elif link is not None and 'mailto' not in link and tldextract.extract(link).domain == domain:
+            elif link is not None and 'mailto' not in link and tldextract.extract(link).domain == domain and not self.is_blacklisted(tldextract.extract(link).domain):
                 to_follow.append(link)
 
         for i in self.remove_duplicates(to_save):
